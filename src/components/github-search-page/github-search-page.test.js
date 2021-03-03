@@ -25,7 +25,7 @@ const fakeRepo = {
 }
 
 const server = setupServer(
-  rest.get('search/repositories', (req, res, ctx) => 
+  rest.get('/search/repositories', (req, res, ctx) => 
     res(
       ctx.status(200), 
       ctx.json({
@@ -43,6 +43,9 @@ afterEach(() => server.resetHandlers())
 afterAll(() => server.close())
 
 beforeEach(() => render(<GithubSearchPage />))
+
+const fireClickSearch = () =>
+    fireEvent.click(screen.getByRole('button', {name: /search/i}))
 
 describe('when the GithubSearchPage is mounted', () => {
   it('must display the title', () => {
@@ -69,8 +72,6 @@ describe('when the GithubSearchPage is mounted', () => {
 })
 
 describe('when the developer does a search', () => {
-  const fireClickSearch = () =>
-    fireEvent.click(screen.getByRole('button', {name: /search/i}))
 
   it('the search button should be disabled until the search is done', async () => {
     expect(screen.getByRole('button', {name: /search/i})).not.toBeDisabled()
@@ -109,7 +110,7 @@ describe('when the developer does a search', () => {
 
     const [repository, stars, forks, openIssues, updatedAt] = tableHeaders
 
-    expect(repository).toHaveTextContent(fakeRepo.name)
+    expect(repository).toHaveTextContent(/repository/i)
     expect(stars).toHaveTextContent(/stars/i)
     expect(forks).toHaveTextContent(/forks/i)
     expect(openIssues).toHaveTextContent(/open issues/i)
@@ -128,19 +129,20 @@ describe('when the developer does a search', () => {
 
     const [repository, stars, forks, openIssues, updatedAt] = tableCells
 
-    expect(within(repository).getByRole('img', {name: /test/i}))
+    const avatarImg = within(repository).getByRole('img', {name: fakeRepo.name})
+    expect(avatarImg).toBeInTheDocument()
 
     expect(tableCells).toHaveLength(5)
 
-    expect(repository).toHaveTextContent(/test/i)
-    expect(stars).toHaveTextContent(/10/)
-    expect(forks).toHaveTextContent(/5/)
-    expect(openIssues).toHaveTextContent(/2/i)
-    expect(updatedAt).toHaveTextContent(/2020-01-01/i)
+    expect(repository).toHaveTextContent(fakeRepo.name)
+    expect(stars).toHaveTextContent(fakeRepo.stargazers_count)
+    expect(forks).toHaveTextContent(fakeRepo.forks_count)
+    expect(openIssues).toHaveTextContent(fakeRepo.open_issues_count)
+    expect(updatedAt).toHaveTextContent(fakeRepo.updated_at)
 
-    expect(withinTable.getByText(/test/i).closest('a')).toHaveAttribute(
+    expect(withinTable.getByText(fakeRepo.name).closest('a')).toHaveAttribute(
       'href',
-      'http://localhost:3000/test',
+      fakeRepo.html_url,
     )
   })
 
@@ -189,5 +191,23 @@ describe('when the developer does a search', () => {
 })
 
 describe('when the developer does a search without results', () => {
-  it.todo('must show a empty state message')
+  it('must show a empty state message "You search has no result"', async () => {
+    server.use(rest.get('/search/repositories', (req, res, ctx) => 
+        res(
+          ctx.status(200), 
+          ctx.json({
+            total_count: 0,
+            incomplete_results: false,
+            items: []
+          }))  
+    ))
+    
+    fireClickSearch()
+
+    await waitFor(() => 
+      expect(screen.getByText(/you search has no result/i)).toBeInTheDocument()
+    )
+
+    expect(screen.queryByRole('table')).not.toBeInTheDocument()   
+  })
 })
