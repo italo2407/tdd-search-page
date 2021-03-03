@@ -6,8 +6,41 @@ import {
   waitFor,
   within,
 } from '@testing-library/react'
+import { rest } from 'msw'
+import { setupServer } from 'msw/node'
 
 import {GithubSearchPage} from './github-search-page'
+
+const fakeRepo = {
+  id: '56757919',
+  name: 'django-rest-framework-reactive',
+  owner: {
+    avatar_url: 'https://avatars0.githubusercontent.com/u/2120224?v=4',
+  },
+  html_url: 'https://github.com/genialis/django-rest-framework-reactive',
+  updated_at: '2020-10-24',
+  stargazers_count: 58,
+  forks_count: 9,
+  open_issues_count: 0,
+}
+
+const server = setupServer(
+  rest.get('search/repositories', (req, res, ctx) => 
+    res(
+      ctx.status(200), 
+      ctx.json({
+        total_count: 8643,
+        incomplete_results: false,
+        items: [fakeRepo]
+      }))  
+  )
+)
+
+beforeAll(() => server.listen())
+
+afterEach(() => server.resetHandlers())
+
+afterAll(() => server.close())
 
 beforeEach(() => render(<GithubSearchPage />))
 
@@ -76,7 +109,7 @@ describe('when the developer does a search', () => {
 
     const [repository, stars, forks, openIssues, updatedAt] = tableHeaders
 
-    expect(repository).toHaveTextContent(/repository/i)
+    expect(repository).toHaveTextContent(fakeRepo.name)
     expect(stars).toHaveTextContent(/stars/i)
     expect(forks).toHaveTextContent(/forks/i)
     expect(openIssues).toHaveTextContent(/open issues/i)
@@ -127,5 +160,34 @@ describe('when the developer does a search', () => {
 
     expect(screen.getByLabelText(/rows per page/i)).toBeInTheDocument()
 
+    fireEvent.mouseDown(screen.getByLabelText(/rows per page/i))
+
+    const listbox = screen.getByRole('listbox', {name: /rows per page/i})
+
+    const options = within(listbox).getAllByRole('option')
+
+    const [option30, option50, option100] = options
+
+    expect(option30).toHaveTextContent(/30/)
+    expect(option50).toHaveTextContent(/50/)
+    expect(option100).toHaveTextContent(/100/)
   })
+
+  it('must exists the next and previous pagination button', async () => {
+    fireClickSearch()
+
+    await screen.findByRole('table')
+
+    const previousPageBtn = screen.getByRole('button', {name: /previous page/i})
+
+    expect(previousPageBtn).toBeInTheDocument()
+
+    expect(screen.getByRole('button', {name: /next page/i})).toBeInTheDocument()
+    
+    expect(previousPageBtn).toBeDisabled()
+  })
+})
+
+describe('when the developer does a search without results', () => {
+  it.todo('must show a empty state message')
 })

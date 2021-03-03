@@ -20,7 +20,7 @@ const tableHeaders = [
     'Updated at'
 ]
 
-export const Content = ({isSearchApplied}) =>
+export const Content = ({isSearchApplied, reposList}) =>
   isSearchApplied ? (
     <>
         <TableContainer>
@@ -33,25 +33,27 @@ export const Content = ({isSearchApplied}) =>
             </TableRow>
             </TableHead>
             <TableBody>
-            <TableRow>
-                <TableCell>
-                <Avatar alt="test" src="/logo192.png" />
-                <Link href="http://localhost:3000/test">Test</Link>
-                </TableCell>
-                <TableCell>10</TableCell>
-                <TableCell>5</TableCell>
-                <TableCell>2</TableCell>
-                <TableCell>2020-01-01</TableCell>
-            </TableRow>
+              {reposList.map((name) => (
+                <TableRow>
+                  <TableCell>
+                    <Avatar alt="test" src="/logo192.png" />
+                    <Link href="http://localhost:3000/test">{name}</Link>
+                  </TableCell>
+                  <TableCell>10</TableCell>
+                  <TableCell>5</TableCell>
+                  <TableCell>2</TableCell>
+                  <TableCell>2020-01-01</TableCell>
+                </TableRow>
+              ))}
             </TableBody>
         </Table>
         </TableContainer>
         <TablePagination 
-            rowsPerPageOptions={[10, 25, 100]}
+            rowsPerPageOptions={[30, 50, 100]}
             component="div"
             count={1}
-            rowsPerPage={10}
-            page={1}
+            rowsPerPage={30}
+            page={0}
             onChangePage={()=>{}}
             omChangeRowsPerPage={()=>{}}
         />
@@ -73,4 +75,5 @@ export default Content
 
 Content.propTypes = {
   isSearchApplied: PropTypes.bool.isRequired,
+  reposList: PropTypes.arrayOf(PropTypes.object).isRequired
 }
