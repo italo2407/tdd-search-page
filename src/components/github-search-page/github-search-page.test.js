@@ -14,9 +14,9 @@ import {
   makeFakeResponse,
   makeFakeRepo,
   getReposListBy,
-  getReposPerPage,
 } from '../../__fixtures__/repos'
 import {OK_STATUS} from '../../consts'
+import { handlePaginated } from '../../__fixtures__/handlers'
 
 const fakeResponse = makeFakeResponse({totalCount: 1})
 
@@ -69,6 +69,9 @@ describe('when the developer does a search', () => {
   it('the search button should be disabled until the search is done', async () => {
     expect(screen.getByRole('button', {name: /search/i})).not.toBeDisabled()
 
+    fireEvent.change(screen.getByLabelText(/filter by/i), {target: { value: 'test' }})
+
+    expect(screen.getByRole('button', {name: /search/i})).not.toBeDisabled()
     fireClickSearch()
 
     expect(screen.getByRole('button', {name: /search/i})).toBeDisabled()
@@ -246,22 +249,38 @@ describe('when the developer types on filter by and does a search', () => {
 describe('when the developer does a search and selects 50 rows per page', () => {
   it('must fetch a new search and display 50 rows results on the table', async () => {
     server.use(
-      rest.get('/search/repositories', (req, res, ctx) =>
-        res(
-          ctx.status(OK_STATUS),
-          ctx.json({
-            ...makeFakeResponse(),
-            items: getReposPerPage({
-              perPage: Number(req.url.searchParams.get('per_page')), 
-              currentPage: req.url.searchParams.get('page')}),
-          }),
-        ),
+      rest.get('/search/repositories', handlePaginated
       ),
     )
 
     fireClickSearch()
 
     expect(await screen.findByRole('table')).toBeInTheDocument()
-    expect(await screen.findByRole('row')).toHaveLength(31)
+    expect(await screen.findAllByRole('row')).toHaveLength(31)
+
+    fireEvent.mouseDown(screen.getByLabelText(/rows per page/i))
+    fireEvent.click(screen.getByRole('option', {name: '50'}))
+    
+    await waitFor(() =>
+          expect(screen.getByRole('button', {name: /search/i})).not.toBeDisabled(),
+          {timeout: 3000}
+    )
+    expect(screen.getAllByRole('row')).toHaveLength(51)
+  })
+})
+
+describe.only('when the developer clicks on search and then on next page button', () => {
+  it('must display the next repositories page', async () => {
+    server.use(
+      rest.get('/search/repositories', handlePaginated
+      ),
+    )
+
+    fireClickSearch()
+
+    expect(await screen.findByRole('table')).toBeInTheDocument()
+
+    expect(screen.getByRole('cell', {name: /1-0/})).toBeInTheDocument()
+
   })
 })
