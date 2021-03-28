@@ -5,6 +5,10 @@ export const makeFakeResponse = ({totalCount = 0} = {}) => ({
     total_count: totalCount,
     items: [],
   })
+
+  export const makeFakeError = ({message = 'Validation Failed'} = {}) => ({
+    message
+  })
   
   export const makeFakeRepo = ({
     name = 'django-rest-framework-reactive',
@@ -37,5 +41,6 @@ export const getReposPerPage = ({currentPage, perPage}) =>
   export default {
     makeFakeResponse,
     makeFakeRepo,
-    getReposListBy
+    getReposListBy,
+    makeFakeError
   }
