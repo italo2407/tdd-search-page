@@ -6,6 +6,7 @@ import Container from '@material-ui/core/Container'
 import Grid from '@material-ui/core/Grid'
 import Box from '@material-ui/core/Box'
 import TablePagination from '@material-ui/core/TablePagination'
+import Snackbar from '@material-ui/core/Snackbar'
 
 import {Content} from '../content'
 import {GithubTable} from '../github-table'
@@ -22,25 +23,53 @@ export const GithubSearchPage = () => {
   const [rowsPerPage, setRowsPerPage] = useState(ROWS_PER_PAGE_DEFAULT)
   const [currentPage, setCurrentPage] = useState(INITIAL_CURRENT_PAGE)
   const [totalCount, setTotalCount] = useState(INITIAL_TOTAL_COUNT)
+  const [isOpen, setIsOPen] = useState(false)
+  const [errorMessage, setErrorMessage] = useState('')
 
   const didMount = useRef(false)
+  
   const searchByInput = useRef(null)
 
   const handleSearch = useCallback(async () => {
-    setIsSearching(true)
-    const response = await getRepos({q: searchByInput.current.value, rowsPerPage, currentPage})
+    try {
+      setIsSearching(true)
+      const response = await getRepos({q: searchByInput.current.value, rowsPerPage, currentPage})
 
-    const data = await response.json()
+      if(!response.ok) {
+        throw response
+      }
 
-    setReposList(data.items)
-    setTotalCount(data.total_count)
-    setIsSearchApplied(true)
-    setIsSearching(false)
+      const data = await response.json()
+
+      setReposList(data.items)
+      setTotalCount(data.total_count)
+      setIsSearchApplied(true)
+      
+    } catch (err) {
+      const data = await err.json()
+      setIsOPen(true)
+      setErrorMessage(data.message)
+    } finally {
+      setIsSearching(false)
+    }
+
   }, [rowsPerPage, currentPage])
 
-  const handleChangeRowsPerPage = ({target: {value}}) => setRowsPerPage(value)
+  const handleChangeRowsPerPage = ({target: {value}}) => {
+    setCurrentPage(INITIAL_CURRENT_PAGE)
+    setRowsPerPage(value)
+  }
 
   const handleChangePage = (event, newPage) => setCurrentPage(newPage)
+
+  const handleClickSearch = () => {
+    if(currentPage === INITIAL_CURRENT_PAGE) {
+      handleSearch()
+      return
+    }
+
+    setCurrentPage(INITIAL_CURRENT_PAGE)
+  }
 
   useEffect(() => {
     if (!didMount.current) {
@@ -75,7 +104,7 @@ export const GithubSearchPage = () => {
             fullWidth
             color="primary"
             variant="contained"
-            onClick={handleSearch}
+            onClick={handleClickSearch}
           >
             Search
           </Button>
@@ -98,6 +127,17 @@ export const GithubSearchPage = () => {
           </>
         </Content>
       </Box>
+
+      <Snackbar
+        anchorOrigin={{
+          vertical: 'top',
+          horizontal: 'center'
+        }}
+        open={isOpen}
+        autoHideDuration={6000}
+        onClose={() => setIsOPen(false)}
+        message={errorMessage}
+      />
     </Container>
   )
 }
